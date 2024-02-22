@@ -16,6 +16,8 @@ export default function Gameboard() {
     useState(new Array(NBR_OF_DICES).fill(false));
   const [selectedValues, setSelectedValues] = 
     useState(new Array(6).fill(null));
+  const [scoreSet, setScoreSet] = useState(new Array(6).fill(false)); // Track if score is set for each value
+
 
   const row = [];
   for (let i = 0; i < NBR_OF_DICES; i++) {
@@ -36,15 +38,43 @@ export default function Gameboard() {
   const diceValues = [];
   for (let i = 0; i < 6; i++) {
     diceValues.push(
-        <View
+      <Pressable 
         key={i}
-        >
-        <Text style={styles.gameinfo}>{
-            selectedValues[i] ? selectedValues[i] : '0'
-          }</Text>
-          <Text style={styles.gameinfo}>{`${i + 1}`}</Text>
-          </View>
-    )
+        onPress={() => setScore(i)}>
+        <Text style={styles.gameinfo}>{selectedValues[i] !== null ? 'X' : ''}</Text>
+        <Text style={styles.gameinfo}>{i + 1}</Text>
+      </Pressable>
+    );
+  }
+
+  const setScore = (value) => {
+    if (nbrOfThrowsLeft === 0) {
+      setStatus('You must set a score during the last throw.');
+    }
+
+    if (selectedValues[value] !== null || scoreSet[value]) {
+      setStatus(`Score already set for value ${value + 1}.`);
+      return;
+    }
+
+    setSelectedValues(prevValues => {
+      const newValues = [...prevValues];
+      newValues[value] = calculateScore(value + 1); // Calculate score for the value
+      return newValues;
+    });
+
+    setScoreSet(prevScores => {
+      const newScores = [...prevScores];
+      newScores[value] = true;
+      return newScores;
+    });
+
+    setStatus(`Score ${calculateScore(value + 1)} set for value ${value + 1}.`);
+  }
+
+  const calculateScore = (value) => {
+    // Calculate and return score for the given value
+    return value * 10;
   }
 
   useEffect(() => {
@@ -66,18 +96,8 @@ export default function Gameboard() {
   }
 
 
-  const selectDice = (i) => {
-    // Check if all throws for this turn have been used
-    if (nbrOfThrowsLeft === 0) {
-      setStatus('All throws for this turn have been used.');
-      return;
-    }
-
-    // Check if a value has already been selected for any dice
-    if (selectedValues.some(value => value !== null)) {
-      setStatus('A value has already been selected for another dice.');
-      return;
-    }
+  
+  const selectDice = (i, selectedDiceValue) => {
 
     let dices = [...selectedDices];
     dices[i] = !selectedDices[i];
@@ -98,6 +118,11 @@ export default function Gameboard() {
   }
 
   const throwDices = () => {
+    if (nbrOfThrowsLeft === 0 && selectedValues.includes(null)) {
+        setStatus('You must set a score for each value before the next turn.');
+        return;
+      }
+
     for (let i = 0; i < NBR_OF_DICES; i++) {
       if (!selectedDices[i]) {
         let randomNumber = Math.floor(Math.random() * 6 + 1);
