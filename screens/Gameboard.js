@@ -17,6 +17,7 @@ export default function Gameboard() {
   const [selectedValues, setSelectedValues] = 
     useState(new Array(6).fill(null));
   const [scoreSet, setScoreSet] = useState(new Array(6).fill(false)); // Track if score is set for each value
+  const [hasScoreBeenSet, setHasScoreBeenSet] = useState(false)
 
 
   const row = [];
@@ -69,6 +70,7 @@ export default function Gameboard() {
       return newScores;
     });
 
+    setHasScoreBeenSet(true); // Set score as set for this turn
     setStatus(`Score ${calculateScore(value + 1)} set for value ${value + 1}.`);
   }
 
@@ -79,10 +81,12 @@ export default function Gameboard() {
 
   useEffect(() => {
     if (nbrOfThrowsLeft === NBR_OF_THROWS) {
+      setHasScoreBeenSet(true)
       setStatus('Game has not started');
     }
     if (nbrOfThrowsLeft < 0) {
       setNbrOfThrowsLeft(NBR_OF_THROWS-1);
+      setHasScoreBeenSet(false); // Reset scoreSet for the next turn
     }
   }, [nbrOfThrowsLeft]);
 
@@ -97,32 +101,34 @@ export default function Gameboard() {
 
 
   
-  const selectDice = (i, selectedDiceValue) => {
+  const selectDice = (i) => {
+    const spotCount = parseInt(board[i].split("-")[1]);
+
+    // Check if any dice has been previously selected
+    if (selectedDices.some((dice, index) => dice && index !== i && selectedValues[index] === spotCount)) {
+      setStatus('You can only select dice with the same value as the previously selected one.');
+      return;
+  }
+  if (selectedDices.some((dice, index) => dice && index !== i)) {
+    // Check if the selected value matches the value of the previously selected dice
+    const selectedValue = selectedValues.find(value => value !== null);
+    if (selectedValue !== spotCount && spotCount) {
+        setStatus('You can only select dice with the same value as the previously selected one.');
+        return;
+    }
+}
 
     let dices = [...selectedDices];
     dices[i] = !selectedDices[i];
     setSelectedDices(dices);
-
-    // Get the spot count of the selected dice
-    const spotCount = parseInt(board[i].split("-")[1]);
-
-    // Check if the value should be set for this dice
-    if (nbrOfThrowsLeft === 1) {
-      setSelectedValues(prevValues => {
-        const newValues = [...prevValues];
-        newValues[i] = spotCount;
-        return newValues;
-      });
-      setStatus(`Value ${spotCount} has been selected for dice ${i + 1}.`);
-    }
-  }
+}
 
   const throwDices = () => {
-    if (nbrOfThrowsLeft === 0 && selectedValues.includes(null)) {
-        setStatus('You must set a score for each value before the next turn.');
-        return;
-      }
-
+   
+    if (!hasScoreBeenSet) {
+      setStatus('You must set a score for a value before next turn');
+      return;
+    }
     for (let i = 0; i < NBR_OF_DICES; i++) {
       if (!selectedDices[i]) {
         let randomNumber = Math.floor(Math.random() * 6 + 1);
